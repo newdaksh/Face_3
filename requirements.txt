@@ -1,0 +1,8 @@
+deepface==0.0.88
+faiss-cpu #or faiss-gpu
+mtcnn==0.1.1
+opencv-python
+numpy
+Pillow
+tqdm
+flask

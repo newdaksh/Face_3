@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Face Recognition System</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-search"></i>
+          <h1>AI Face Recognition</h1>
+        </div>
+        <!-- <div class="subtitle">Advanced Neural Network Face Matching System</div> -->
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+      <!-- Upload Section -->
+      <section class="upload-section">
+        <div class="upload-card">
+          <div class="card-header">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h2>Upload Query Image</h2>
+            <p>Select a face image to find similar matches in our database</p>
+          </div>
+
+          <form
+            id="searchForm"
+            action="/search"
+            method="post"
+            enctype="multipart/form-data"
+          >
+            <input type="hidden" name="top_k" value="50" />
+            <input type="hidden" name="threshold" value="0.4" />
+
+            <div class="upload-area">
+              <input
+                type="file"
+                name="query_image"
+                id="queryImage"
+                accept="image/*"
+                required
+              />
+              <!-- New: Click a selfie button -->
+              <button
+                type="button"
+                id="selfieBtn"
+                class="selfie-btn"
+                title="Use camera to take a selfie"
+              >
+                <i class="fas fa-camera"></i>
+                <span>Click a selfie</span>
+              </button>
+              <label for="queryImage" class="upload-label">
+                <div class="upload-content">
+                  <i class="fas fa-image upload-icon"></i>
+                  <span class="upload-text">Click to select image</span>
+                  <span class="upload-subtext">PNG, JPG, JPEG up to 10MB</span>
+                </div>
+              </label>
+
+              <!-- Preview Area -->
+              <div id="previewArea" class="preview-area hidden">
+                <div class="preview-image-wrap">
+                  <img id="previewImage" src="" alt="Preview" />
+                  <div class="preview-overlay">
+                    <button
+                      type="button"
+                      class="btn-change"
+                      onclick="changeImage()"
+                    >
+                      Change Image
+                    </button>
+                  </div>
+                </div>
+                <div class="preview-meta">
+                  <div id="previewFilename" class="preview-filename"></div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="search-btn" id="searchBtn" disabled>
+              <i class="fas fa-search"></i>
+              <span>Search Similar Faces</span>
+              <div class="loading-spinner hidden" aria-hidden="true"></div>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Query Preview Section -->
+      {% if query_image %}
+      <section class="query-section">
+        <div class="query-card">
+          <h3><i class="fas fa-eye"></i> Query Image</h3>
+          <div class="query-preview">
+            <img src="{{ query_image }}" alt="Query image" />
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- Results Section -->
+      {% if results is not none %}
+      <section class="results-section">
+        <div class="results-header">
+          <h2><i class="fas fa-images"></i> Search Results</h2>
+          <div class="results-count">{{ results|length }} matches found</div>
+        </div>
+
+        {% if results %}
+        <div class="results-grid">
+          {% for r in results %}
+          <div
+            class="result-card"
+            data-path="{{ r.path|default('') }}"
+            data-file="{{ r.file|e }}"
+            data-score="{{ '%.3f'|format(r.score) }}"
+          >
+            {% if r.path %}
+            <div class="result-image-container">
+              <img src="{{ r.path }}" alt="{{ r.file }}" loading="lazy" />
+              <div class="result-overlay">
+                <i class="fas fa-expand-alt"></i>
+                <span>Click to enlarge</span>
+              </div>
+            </div>
+            {% else %}
+            <div class="result-placeholder">
+              <i class="fas fa-image-slash"></i>
+              <span>Image not found</span>
+            </div>
+            {% endif %}
+            <div class="result-info">
+              <div class="filename">{{ r.file }}</div>
+              <div class="score">
+                <i class="fas fa-percentage"></i>
+                {{ '%.1f'|format(r.score * 100) }}% match
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+          <i class="fas fa-search-minus"></i>
+          <h3>No matches found</h3>
+          <p>Try adjusting your search criteria or upload a different image</p>
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+    </main>
+
+    <!-- Modal for enlarged images -->
+    <div id="imageModal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img id="modalImage" src="" alt="" />
+        <div class="modal-info">
+          <h3 id="modalFilename"></h3>
+          <div id="modalScore"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera Modal for selfie capture -->
+    <div id="cameraModal" class="modal hidden">
+      <div class="modal-content camera-content">
+        <span class="modal-close" id="cameraClose">&times;</span>
+        <h3>Take a Selfie</h3>
+        <video id="cameraVideo" autoplay playsinline></video>
+        <canvas id="cameraCanvas" class="hidden"></canvas>
+        <div class="camera-actions">
+          <button type="button" id="captureBtn" class="btn">Capture</button>
+          <button type="button" id="retakeBtn" class="btn hidden">
+            Retake
+          </button>
+          <button type="button" id="useBtn" class="btn hidden">
+            Use Photo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+      // Image preview functionality
+      document
+        .getElementById("queryImage")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+              document.getElementById("previewImage").src = ev.target.result;
+              document.getElementById("previewArea").classList.remove("hidden");
+              document.querySelector(".upload-label").style.display = "none";
+              document.getElementById("searchBtn").disabled = false;
+              // show filename
+              const nameEl = document.getElementById("previewFilename");
+              if (nameEl) {
+                nameEl.textContent = file.name;
+                nameEl.title = file.name;
+              }
+              // make preview image clickable to enlarge
+              const previewImg = document.getElementById("previewImage");
+              if (previewImg) {
+                previewImg.addEventListener("click", function () {
+                  openModal(ev.target.result, file.name, NaN);
+                });
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+
+      function changeImage() {
+        document.getElementById("queryImage").value = "";
+        document.getElementById("previewArea").classList.add("hidden");
+        document.querySelector(".upload-label").style.display = "flex";
+        document.getElementById("searchBtn").disabled = true;
+        document.getElementById("previewImage").src = "";
+        const nameEl = document.getElementById("previewFilename");
+        if (nameEl) nameEl.textContent = "";
+      }
+
+      // Form submission with loading state
+      document
+        .getElementById("searchForm")
+        .addEventListener("submit", function () {
+          const btn = document.getElementById("searchBtn");
+          const spinner = btn.querySelector(".loading-spinner");
+          const text = btn.querySelector("span");
+
+          btn.disabled = true;
+          if (spinner) spinner.classList.remove("hidden");
+          if (text) text.textContent = "Searching...";
+        });
+
+      // Modal functionality
+      function openModal(imageSrc, filename, score) {
+        if (!imageSrc) return;
+
+        document.getElementById("modalImage").src = imageSrc;
+        document.getElementById("modalFilename").textContent = filename;
+        document.getElementById(
+          "modalScore"
+        ).innerHTML = `<i class="fas fa-percentage"></i> ${(
+          score * 100
+        ).toFixed(1)}% match`;
+        document.getElementById("imageModal").style.display = "flex";
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeModal() {
+        document.getElementById("imageModal").style.display = "none";
+        document.body.style.overflow = "auto";
+      }
+
+      // Close modal on outside click
+      document
+        .getElementById("imageModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeModal();
+          }
+        });
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      // Attach click handlers to result cards (avoid inline onclick attributes)
+      document.querySelectorAll(".result-card").forEach(function (el) {
+        el.addEventListener("click", function () {
+          var path = el.dataset.path || "";
+          var file = el.dataset.file || "";
+          var score = parseFloat(el.dataset.score) || 0.0;
+          openModal(path, file, score);
+        });
+      });
+
+      // Make server-rendered query preview clickable as well
+      const serverQueryImg = document.querySelector(".query-preview img");
+      if (serverQueryImg) {
+        serverQueryImg.style.cursor = "pointer";
+        serverQueryImg.addEventListener("click", function () {
+          openModal(serverQueryImg.src, "Query Image", NaN);
+        });
+      }
+
+      // Selfie / Camera capture logic
+      const selfieBtn = document.getElementById("selfieBtn");
+      const cameraModal = document.getElementById("cameraModal");
+      const cameraVideo = document.getElementById("cameraVideo");
+      const cameraCanvas = document.getElementById("cameraCanvas");
+      const captureBtn = document.getElementById("captureBtn");
+      const retakeBtn = document.getElementById("retakeBtn");
+      const useBtn = document.getElementById("useBtn");
+      const cameraClose = document.getElementById("cameraClose");
+      let stream = null;
+
+      async function openCamera() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user" },
+            audio: false,
+          });
+          cameraVideo.srcObject = stream;
+          cameraModal.classList.remove("hidden");
+          // reset UI
+          captureBtn.classList.remove("hidden");
+          retakeBtn.classList.add("hidden");
+          useBtn.classList.add("hidden");
+        } catch (err) {
+          alert("Unable to access camera: " + err.message);
+        }
+      }
+
+      function closeCamera() {
+        cameraModal.classList.add("hidden");
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+          stream = null;
+        }
+      }
+
+      function dataURLToFile(dataurl, filename) {
+        const arr = dataurl.split(",");
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, { type: mime });
+      }
+
+      selfieBtn.addEventListener("click", function () {
+        openCamera();
+      });
+
+      cameraClose.addEventListener("click", function () {
+        closeCamera();
+      });
+
+      captureBtn.addEventListener("click", function () {
+        const vw = cameraVideo.videoWidth;
+        const vh = cameraVideo.videoHeight;
+        cameraCanvas.width = vw;
+        cameraCanvas.height = vh;
+        const ctx = cameraCanvas.getContext("2d");
+        ctx.drawImage(cameraVideo, 0, 0, vw, vh);
+        const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.92);
+        // show retake/use
+        captureBtn.classList.add("hidden");
+        retakeBtn.classList.remove("hidden");
+        useBtn.classList.remove("hidden");
+        // show preview in canvas (optional)
+        cameraCanvas.classList.remove("hidden");
+      });
+
+      retakeBtn.addEventListener("click", function () {
+        cameraCanvas.classList.add("hidden");
+        captureBtn.classList.remove("hidden");
+        retakeBtn.classList.add("hidden");
+        useBtn.classList.add("hidden");
+      });
+
+      useBtn.addEventListener("click", function () {
+        // grab data from canvas and convert to File, then set to file input
+        const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.92);
+        const file = dataURLToFile(dataUrl, "selfie.jpg");
+
+        // Create a DataTransfer to populate the file input (works in modern browsers)
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        const input = document.getElementById("queryImage");
+        input.files = dt.files;
+
+        // trigger change event so existing preview logic runs
+        const ev = new Event("change", { bubbles: true });
+        input.dispatchEvent(ev);
+
+        closeCamera();
+      });
+
+      // close camera modal on outside click
+      cameraModal.addEventListener("click", function (e) {
+        if (e.target === cameraModal) closeCamera();
+      });
+    </script>
+  </body>
+</html>
