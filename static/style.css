@@ -415,11 +415,23 @@ input[type="file"] {
 
 .selfie-btn i { font-size: 1rem; }
 
-/* Camera modal styles (reuse .modal but ensure center) */
 .modal.hidden { display: none; }
-.camera-content { max-width: 520px; width: 90%; padding: 1.25rem; text-align: center; }
-#cameraVideo { width: 100%; height: auto; border-radius: 12px; background: #000; }
-#cameraCanvas { width: 100%; height: auto; border-radius: 12px; margin-top: 8px; }
+/* Camera modal content: make flexible, limit height, and allow internal scrolling if needed */
+.camera-content {
+  max-width: 920px;
+  width: min(92%, 920px);
+  padding: 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(90vh - 2rem);
+  box-sizing: border-box;
+  overflow: auto;
+}
+.camera-media { width: 100%; display: block; border-radius: 12px; background: #000; }
+#cameraVideo { width: 100%; height: auto; max-height: calc(70vh); object-fit: contain; }
+#cameraCanvas { width: 100%; height: auto; max-height: calc(70vh); object-fit: contain; margin-top: 8px; }
 .camera-actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
 .camera-actions .btn { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border: none; padding: 0.6rem 1rem; border-radius: 10px; cursor: pointer; }
 .camera-actions .btn.hidden { display: none; }
@@ -541,6 +553,10 @@ input[type="file"] {
   padding: 2rem;
 }
 
+.modal.show {
+  display: flex;
+}
+
 .modal-content {
   position: relative;
   max-width: 90vw;
@@ -583,6 +599,16 @@ input[type="file"] {
 
 .modal-close:hover {
   background: rgba(0, 0, 0, 0.8);
+}
+
+/* Camera modal: dark close button for visibility against white modal-content */
+.camera-content .modal-close {
+  color: #333;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.camera-content .modal-close:hover {
+  background: rgba(0,0,0,0.06);
 }
 
 #modalImage {

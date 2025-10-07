@@ -182,8 +182,13 @@
       <div class="modal-content camera-content">
         <span class="modal-close" id="cameraClose">&times;</span>
         <h3>Take a Selfie</h3>
-        <video id="cameraVideo" autoplay playsinline></video>
-        <canvas id="cameraCanvas" class="hidden"></canvas>
+        <video
+          id="cameraVideo"
+          class="camera-media"
+          autoplay
+          playsinline
+        ></video>
+        <canvas id="cameraCanvas" class="camera-media hidden"></canvas>
         <div class="camera-actions">
           <button type="button" id="captureBtn" class="btn">Capture</button>
           <button type="button" id="retakeBtn" class="btn hidden">
@@ -325,6 +330,7 @@
           });
           cameraVideo.srcObject = stream;
           cameraModal.classList.remove("hidden");
+          cameraModal.classList.add("show");
           // reset UI
           captureBtn.classList.remove("hidden");
           retakeBtn.classList.add("hidden");
@@ -336,6 +342,7 @@
 
       function closeCamera() {
         cameraModal.classList.add("hidden");
+        cameraModal.classList.remove("show");
         if (stream) {
           stream.getTracks().forEach((t) => t.stop());
           stream = null;
@@ -365,17 +372,51 @@
       captureBtn.addEventListener("click", function () {
         const vw = cameraVideo.videoWidth;
         const vh = cameraVideo.videoHeight;
+        if (!vw || !vh) {
+          alert("Camera not ready, try again");
+          return;
+        }
         cameraCanvas.width = vw;
         cameraCanvas.height = vh;
         const ctx = cameraCanvas.getContext("2d");
         ctx.drawImage(cameraVideo, 0, 0, vw, vh);
         const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.92);
+
         // show retake/use
         captureBtn.classList.add("hidden");
         retakeBtn.classList.remove("hidden");
         useBtn.classList.remove("hidden");
         // show preview in canvas (optional)
         cameraCanvas.classList.remove("hidden");
+
+        // Create a File from the captured data and populate the file input
+        try {
+          const file = dataURLToFile(dataUrl, "selfie.jpg");
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          const input = document.getElementById("queryImage");
+          input.files = dt.files;
+
+          // update the normal preview area immediately (same UI as file input)
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            document.getElementById("previewImage").src = ev.target.result;
+            document.getElementById("previewArea").classList.remove("hidden");
+            const uploadLabel = document.querySelector(".upload-label");
+            if (uploadLabel) uploadLabel.style.display = "none";
+            document.getElementById("searchBtn").disabled = false;
+            const nameEl = document.getElementById("previewFilename");
+            if (nameEl) {
+              nameEl.textContent = file.name;
+              nameEl.title = file.name;
+            }
+            // close camera modal now that preview is ready
+            closeCamera();
+          };
+          reader.readAsDataURL(file);
+        } catch (err) {
+          console.error("Failed to populate input with captured image", err);
+        }
       });
 
       retakeBtn.addEventListener("click", function () {
