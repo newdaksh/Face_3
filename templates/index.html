@@ -28,76 +28,90 @@
 
     <!-- Main Content -->
     <main class="main-container">
-      <!-- Upload Section -->
+      <!-- Upload Section (two-column: Selfie | Upload) -->
       <section class="upload-section">
-        <div class="upload-card">
-          <div class="card-header">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <h2>Upload Query Image</h2>
-            <p>Select a face image to find similar matches in our database</p>
+        <div class="upload-card two-column">
+          <div class="option-column selfie-column">
+            <div class="card-header">
+              <i class="fas fa-camera-retro"></i>
+              <h2>Click a Selfie</h2>
+              <p>Take a live photo using your device camera</p>
+            </div>
+            <div class="selfie-action">
+              <button type="button" id="selfieBtnBig" class="selfie-big-btn">
+                <i class="fas fa-camera"></i>
+                <span>Open Camera</span>
+              </button>
+              <div class="selfie-note">Allow camera access when prompted.</div>
+            </div>
+            <!-- Selfie Preview Area is removed, will use shared preview -->
           </div>
 
-          <form
-            id="searchForm"
-            action="/search"
-            method="post"
-            enctype="multipart/form-data"
-          >
-            <input type="hidden" name="top_k" value="50" />
-            <input type="hidden" name="threshold" value="0.4" />
-
-            <div class="upload-area">
-              <input
-                type="file"
-                name="query_image"
-                id="queryImage"
-                accept="image/*"
-                required
-              />
-              <!-- New: Click a selfie button -->
-              <button
-                type="button"
-                id="selfieBtn"
-                class="selfie-btn"
-                title="Use camera to take a selfie"
-              >
-                <i class="fas fa-camera"></i>
-                <span>Click a selfie</span>
-              </button>
-              <label for="queryImage" class="upload-label">
-                <div class="upload-content">
-                  <i class="fas fa-image upload-icon"></i>
-                  <span class="upload-text">Click to select image</span>
-                  <span class="upload-subtext">PNG, JPG, JPEG up to 10MB</span>
-                </div>
-              </label>
-
-              <!-- Preview Area -->
-              <div id="previewArea" class="preview-area hidden">
-                <div class="preview-image-wrap">
-                  <img id="previewImage" src="" alt="Preview" />
-                  <div class="preview-overlay">
-                    <button
-                      type="button"
-                      class="btn-change"
-                      onclick="changeImage()"
-                    >
-                      Change Image
-                    </button>
-                  </div>
-                </div>
-                <div class="preview-meta">
-                  <div id="previewFilename" class="preview-filename"></div>
-                </div>
-              </div>
+          <div class="option-column upload-column">
+            <div class="card-header">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <h2>Upload an Image</h2>
+              <p>Select a face image to find similar matches in our database</p>
             </div>
 
-            <button type="submit" class="search-btn" id="searchBtn" disabled>
-              <i class="fas fa-search"></i>
-              <span>Search Similar Faces</span>
-              <div class="loading-spinner hidden" aria-hidden="true"></div>
-            </button>
-          </form>
+            <form
+              id="searchForm"
+              action="/search"
+              method="post"
+              enctype="multipart/form-data"
+            >
+              <input type="hidden" name="top_k" value="50" />
+              <input type="hidden" name="threshold" value="0.4" />
+
+              <div class="upload-area">
+                <input
+                  type="file"
+                  name="query_image"
+                  id="queryImage"
+                  accept="image/*"
+                  required
+                />
+                <label for="queryImage" class="upload-label">
+                  <div class="upload-content">
+                    <i class="fas fa-image upload-icon"></i>
+                    <span class="upload-text">Click to select image</span>
+                    <span class="upload-subtext"
+                      >PNG, JPG, JPEG up to 10MB</span
+                    >
+                  </div>
+                </label>
+
+                <!-- Preview Area is moved out -->
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Shared Preview Area for both Selfie and Upload -->
+        <div id="previewArea" class="preview-area shared-preview hidden">
+          <div class="preview-image-wrap">
+            <img id="previewImage" src="" alt="Preview" />
+            <div class="preview-overlay">
+              <button type="button" class="btn-change" onclick="changeImage()">
+                Change Image
+              </button>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <div id="previewFilename" class="preview-filename"></div>
+          </div>
+        </div>
+
+        <!-- shared action button spanning both columns -->
+        <div
+          class="shared-action"
+          style="grid-column: 1 / -1; margin-top: 1rem"
+        >
+          <button type="button" class="search-btn" id="searchBtn" disabled>
+            <i class="fas fa-search"></i>
+            <span>Search Similar Faces</span>
+            <div class="loading-spinner hidden" aria-hidden="true"></div>
+          </button>
         </div>
       </section>
 
@@ -204,6 +218,23 @@
     <!-- JavaScript -->
     <script>
       // Image preview functionality
+      const uploadInput = document.getElementById("queryImage");
+      const uploadLabel = document.querySelector(".upload-label");
+
+      function disableUpload(disabled) {
+        if (!uploadInput) return;
+        uploadInput.disabled = disabled;
+        if (uploadLabel) {
+          uploadLabel.classList.toggle("disabled-label", disabled);
+        }
+      }
+
+      function disableSelfie(disabled) {
+        if (selfieBtnBig) selfieBtnBig.disabled = disabled;
+        if (selfieBtnBig)
+          selfieBtnBig.classList.toggle("disabled-btn", disabled);
+      }
+
       document
         .getElementById("queryImage")
         .addEventListener("change", function (e) {
@@ -215,6 +246,8 @@
               document.getElementById("previewArea").classList.remove("hidden");
               document.querySelector(".upload-label").style.display = "none";
               document.getElementById("searchBtn").disabled = false;
+              // disable selfie controls when a file upload is chosen
+              disableSelfie(true);
               // show filename
               const nameEl = document.getElementById("previewFilename");
               if (nameEl) {
@@ -230,6 +263,8 @@
               }
             };
             reader.readAsDataURL(file);
+            // When a file is uploaded, clear any existing selfie preview
+            clearSelfie();
           }
         });
 
@@ -241,13 +276,47 @@
         document.getElementById("previewImage").src = "";
         const nameEl = document.getElementById("previewFilename");
         if (nameEl) nameEl.textContent = "";
+        // re-enable selfie controls when uploaded image is removed
+        disableSelfie(false);
+        // also re-enable upload if it was disabled by a selfie
+        disableUpload(false);
       }
 
       // Form submission with loading state
-      document
-        .getElementById("searchForm")
-        .addEventListener("submit", function () {
-          const btn = document.getElementById("searchBtn");
+      const searchForm = document.getElementById("searchForm");
+      const sharedSearchBtn = document.getElementById("searchBtn");
+
+      // Handle form submit (from either built-in submit or shared button)
+      if (searchForm) {
+        searchForm.addEventListener("submit", function (evt) {
+          // If user has a selfie preview but hasn't populated the upload input,
+          // populate it now from the last capture so the server receives the file.
+          try {
+            const input = document.getElementById("queryImage");
+            if (
+              input &&
+              input.files.length === 0 &&
+              cameraCanvas &&
+              cameraCanvas.dataset &&
+              cameraCanvas.dataset.lastCapture
+            ) {
+              const dataUrl = cameraCanvas.dataset.lastCapture;
+              const file = dataURLToFile(dataUrl, "selfie.jpg");
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              input.files = dt.files;
+              // trigger change so preview shows if needed
+              const ev = new Event("change", { bubbles: true });
+              input.dispatchEvent(ev);
+            }
+          } catch (e) {
+            console.warn(
+              "Failed to attach selfie to upload input before submit",
+              e
+            );
+          }
+
+          const btn = sharedSearchBtn;
           const spinner = btn.querySelector(".loading-spinner");
           const text = btn.querySelector("span");
 
@@ -255,6 +324,16 @@
           if (spinner) spinner.classList.remove("hidden");
           if (text) text.textContent = "Searching...";
         });
+      }
+
+      // Wire shared button to submit the form
+      if (sharedSearchBtn && searchForm) {
+        sharedSearchBtn.addEventListener("click", function () {
+          if (!sharedSearchBtn.disabled) {
+            searchForm.requestSubmit();
+          }
+        });
+      }
 
       // Modal functionality
       function openModal(imageSrc, filename, score) {
@@ -262,11 +341,17 @@
 
         document.getElementById("modalImage").src = imageSrc;
         document.getElementById("modalFilename").textContent = filename;
-        document.getElementById(
-          "modalScore"
-        ).innerHTML = `<i class="fas fa-percentage"></i> ${(
-          score * 100
-        ).toFixed(1)}% match`;
+        const scoreEl = document.getElementById("modalScore");
+        if (scoreEl) {
+          if (isNaN(score)) {
+            scoreEl.style.display = "none";
+          } else {
+            scoreEl.style.display = "block";
+            scoreEl.innerHTML = `<i class="fas fa-percentage"></i> ${(
+              score * 100
+            ).toFixed(1)}% match`;
+          }
+        }
         document.getElementById("imageModal").style.display = "flex";
         document.body.style.overflow = "hidden";
       }
@@ -289,6 +374,7 @@
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") {
           closeModal();
+          closeCamera();
         }
       });
 
@@ -312,7 +398,7 @@
       }
 
       // Selfie / Camera capture logic
-      const selfieBtn = document.getElementById("selfieBtn");
+      const selfieBtnBig = document.getElementById("selfieBtnBig");
       const cameraModal = document.getElementById("cameraModal");
       const cameraVideo = document.getElementById("cameraVideo");
       const cameraCanvas = document.getElementById("cameraCanvas");
@@ -330,8 +416,10 @@
           });
           cameraVideo.srcObject = stream;
           cameraModal.classList.remove("hidden");
-          cameraModal.classList.add("show");
+          cameraModal.style.display = "flex";
           // reset UI
+          cameraVideo.classList.remove("hidden");
+          cameraCanvas.classList.add("hidden");
           captureBtn.classList.remove("hidden");
           retakeBtn.classList.add("hidden");
           useBtn.classList.add("hidden");
@@ -342,7 +430,7 @@
 
       function closeCamera() {
         cameraModal.classList.add("hidden");
-        cameraModal.classList.remove("show");
+        cameraModal.style.display = "none";
         if (stream) {
           stream.getTracks().forEach((t) => t.stop());
           stream = null;
@@ -351,7 +439,9 @@
 
       function dataURLToFile(dataurl, filename) {
         const arr = dataurl.split(",");
-        const mime = arr[0].match(/:(.*?);/)[1];
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (!mimeMatch) return null;
+        const mime = mimeMatch[1];
         const bstr = atob(arr[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
@@ -361,13 +451,15 @@
         return new File([u8arr], filename, { type: mime });
       }
 
-      selfieBtn.addEventListener("click", function () {
-        openCamera();
-      });
+      if (selfieBtnBig)
+        selfieBtnBig.addEventListener("click", function () {
+          openCamera();
+        });
 
-      cameraClose.addEventListener("click", function () {
-        closeCamera();
-      });
+      if (cameraClose)
+        cameraClose.addEventListener("click", function () {
+          closeCamera();
+        });
 
       captureBtn.addEventListener("click", function () {
         const vw = cameraVideo.videoWidth;
@@ -382,67 +474,47 @@
         ctx.drawImage(cameraVideo, 0, 0, vw, vh);
         const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.92);
 
-        // show retake/use
-        captureBtn.classList.add("hidden");
-        retakeBtn.classList.remove("hidden");
-        useBtn.classList.remove("hidden");
-        // show preview in canvas (optional)
-        cameraCanvas.classList.remove("hidden");
-
-        // Create a File from the captured data and populate the file input
-        try {
-          const file = dataURLToFile(dataUrl, "selfie.jpg");
+        // **** START: MODIFIED LOGIC ****
+        // Directly use the captured photo as if it were an uploaded file.
+        const file = dataURLToFile(dataUrl, "selfie.jpg");
+        if (file) {
+          // Use DataTransfer to create a FileList
           const dt = new DataTransfer();
           dt.items.add(file);
+
           const input = document.getElementById("queryImage");
           input.files = dt.files;
 
-          // update the normal preview area immediately (same UI as file input)
-          const reader = new FileReader();
-          reader.onload = function (ev) {
-            document.getElementById("previewImage").src = ev.target.result;
-            document.getElementById("previewArea").classList.remove("hidden");
-            const uploadLabel = document.querySelector(".upload-label");
-            if (uploadLabel) uploadLabel.style.display = "none";
-            document.getElementById("searchBtn").disabled = false;
-            const nameEl = document.getElementById("previewFilename");
-            if (nameEl) {
-              nameEl.textContent = file.name;
-              nameEl.title = file.name;
-            }
-            // close camera modal now that preview is ready
-            closeCamera();
-          };
-          reader.readAsDataURL(file);
-        } catch (err) {
-          console.error("Failed to populate input with captured image", err);
+          // Manually trigger the 'change' event on the input.
+          // This will make our existing preview logic run.
+          const ev = new Event("change", { bubbles: true });
+          input.dispatchEvent(ev);
         }
+        // Now that the file is in the input, close the camera.
+        closeCamera();
+        // **** END: MODIFIED LOGIC ****
       });
 
+      // This function is now redundant but kept for reference.
       retakeBtn.addEventListener("click", function () {
+        cameraVideo.classList.remove("hidden");
         cameraCanvas.classList.add("hidden");
         captureBtn.classList.remove("hidden");
         retakeBtn.classList.add("hidden");
         useBtn.classList.add("hidden");
       });
 
+      // This button is also now redundant.
       useBtn.addEventListener("click", function () {
-        // grab data from canvas and convert to File, then set to file input
-        const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.92);
-        const file = dataURLToFile(dataUrl, "selfie.jpg");
-
-        // Create a DataTransfer to populate the file input (works in modern browsers)
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        const input = document.getElementById("queryImage");
-        input.files = dt.files;
-
-        // trigger change event so existing preview logic runs
-        const ev = new Event("change", { bubbles: true });
-        input.dispatchEvent(ev);
-
-        closeCamera();
+        // The logic from here has been moved into the captureBtn handler.
       });
+
+      // This function is only needed if you want a separate selfie preview,
+      // which we are no longer using to simplify the flow.
+      function clearSelfie() {
+        // This function is no longer used with the new simplified flow.
+        // Kept for reference.
+      }
 
       // close camera modal on outside click
       cameraModal.addEventListener("click", function (e) {

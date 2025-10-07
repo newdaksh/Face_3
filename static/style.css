@@ -85,6 +85,43 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.option-column { background: linear-gradient(180deg,#fff,#fff); border-radius: 12px; padding: 1rem; }
+.option-column { min-height: 260px; }
+.selfie-column .card-header i { font-size: 2.25rem; color: #f97373; }
+.upload-column .card-header i { font-size: 2.25rem; color: #667eea; }
+
+.selfie-big-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg,#ff6b6b,#ff8a8a);
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.selfie-note { margin-top: .75rem; color: #666; font-size: .95rem; }
+
+/* Ensure option columns match height */
+.two-column { align-items: stretch; }
+.two-column .option-column { display: flex; flex-direction: column; justify-content: space-between; }
+
+/* Shared action button that spans both columns */
+.shared-action { grid-column: 1 / -1; margin-top: 1rem; display:flex; }
+.shared-action .search-btn { flex: 1; }
+.shared-action .search-btn { padding: 1rem 1.25rem; font-size: 1.05rem; }
+
 .card-header {
   text-align: center;
   margin-bottom: 2rem;
@@ -180,6 +217,30 @@ input[type="file"] {
   padding: 1rem;
 }
 
+.shared-preview {
+  grid-column: 1 / -1;
+  margin-top: 1.5rem;
+  min-height: 250px;
+  border: 2px solid #ddd;
+}
+
+/* Selfie preview uses the same visual style as upload preview */
+#selfiePreviewArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 0.75rem;
+}
+
+#selfiePreview {
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
 .preview-area img {
   max-width: 100%;
   max-height: 300px;
@@ -250,8 +311,8 @@ input[type="file"] {
 /* Search Button */
 .search-btn {
   width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #00ffc3 ;
+  color: rgb(0, 0, 0);
   border: none;
   padding: 1rem 2rem;
   border-radius: 50px;
@@ -611,6 +672,20 @@ input[type="file"] {
   background: rgba(0,0,0,0.06);
 }
 
+/* Disabled visuals for mutual exclusion */
+.upload-label.disabled-label {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(40%);
+}
+
+.disabled-btn {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+  transform: none !important;
+  filter: grayscale(40%);
+}
+
 #modalImage {
   width: 100%;
   height: auto;
@@ -663,6 +738,8 @@ input[type="file"] {
   .upload-card {
     padding: 1.5rem;
   }
+
+  .two-column { grid-template-columns: 1fr; }
   
   .modal-content {
     margin: 1rem;
