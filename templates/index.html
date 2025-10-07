@@ -60,8 +60,13 @@
               method="post"
               enctype="multipart/form-data"
             >
-              <input type="hidden" name="top_k" value="50" />
-              <input type="hidden" name="threshold" value="0.4" />
+              <input type="hidden" name="top_k" id="topKHidden" value="20" />
+              <input
+                type="hidden"
+                name="threshold"
+                id="thresholdHidden"
+                value="0.4"
+              />
 
               <div class="upload-area">
                 <input
@@ -99,6 +104,35 @@
           </div>
           <div class="preview-meta">
             <div id="previewFilename" class="preview-filename"></div>
+
+            <!-- Controls that appear only after preview is shown -->
+            <div id="previewControls" class="preview-controls hidden">
+              <label for="topKUI">Max results:</label>
+              <input id="topKUI" type="number" min="1" max="200" value="20" />
+
+              <label for="thresholdUI">Similarity threshold (0-1):</label>
+              <div class="threshold-row">
+                <input
+                  id="thresholdUI"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.55"
+                />
+                <input
+                  id="thresholdVal"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.40"
+                  title="Set similarity threshold value"
+                  placeholder="e.g. 0.40"
+                  class="threshold-input"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -133,6 +167,11 @@
         <div class="results-header">
           <h2><i class="fas fa-images"></i> Search Results</h2>
           <div class="results-count">{{ results|length }} matches found</div>
+          <div class="download-actions">
+            <button type="button" id="downloadAllBtn" class="btn hidden">
+              <i class="fas fa-download"></i> Download All Images (ZIP)
+            </button>
+          </div>
         </div>
 
         {% if results %}
@@ -246,6 +285,10 @@
               document.getElementById("previewArea").classList.remove("hidden");
               document.querySelector(".upload-label").style.display = "none";
               document.getElementById("searchBtn").disabled = false;
+              // show preview-only controls (top_k, threshold)
+              const controls = document.getElementById("previewControls");
+              if (controls) controls.classList.remove("hidden");
+              // enable download-all button when results present later
               // disable selfie controls when a file upload is chosen
               disableSelfie(true);
               // show filename
@@ -280,6 +323,9 @@
         disableSelfie(false);
         // also re-enable upload if it was disabled by a selfie
         disableUpload(false);
+        // hide preview-only controls
+        const controls = document.getElementById("previewControls");
+        if (controls) controls.classList.add("hidden");
       }
 
       // Form submission with loading state
@@ -331,6 +377,88 @@
         sharedSearchBtn.addEventListener("click", function () {
           if (!sharedSearchBtn.disabled) {
             searchForm.requestSubmit();
+          }
+        });
+      }
+
+      // Sync UI controls to hidden form inputs
+      const topKUI = document.getElementById("topKUI");
+      const thresholdUI = document.getElementById("thresholdUI");
+      const thresholdVal = document.getElementById("thresholdVal");
+      const topKHidden = document.getElementById("topKHidden");
+      const thresholdHidden = document.getElementById("thresholdHidden");
+
+      function syncControls() {
+        if (topKUI && topKHidden)
+          topKHidden.value = parseInt(topKUI.value) || 50;
+        if (thresholdUI && thresholdHidden)
+          thresholdHidden.value = parseFloat(thresholdUI.value) || 0.4;
+        if (thresholdVal && thresholdUI)
+          thresholdVal.value = parseFloat(thresholdUI.value).toFixed(2);
+      }
+
+      if (topKUI) topKUI.addEventListener("input", syncControls);
+      if (thresholdUI) thresholdUI.addEventListener("input", syncControls);
+      if (thresholdVal)
+        thresholdVal.addEventListener("input", function () {
+          let v = parseFloat(this.value);
+          if (isNaN(v)) v = 0.4;
+          v = Math.max(0, Math.min(1, v));
+          thresholdUI.value = v;
+          syncControls();
+        });
+
+      // Initialize sync
+      syncControls();
+
+      // Download all images as ZIP
+      const downloadAllBtn = document.getElementById("downloadAllBtn");
+      function updateDownloadButtonVisibility() {
+        // show if results exist on page
+        const haveResults =
+          document.querySelectorAll(".result-card").length > 0;
+        if (downloadAllBtn) {
+          downloadAllBtn.classList.toggle("hidden", !haveResults);
+        }
+      }
+
+      // On initial load (server-rendered results), update visibility
+      updateDownloadButtonVisibility();
+
+      if (downloadAllBtn) {
+        downloadAllBtn.addEventListener("click", async function () {
+          // collect filenames (not URLs) from result-card data-file attributes
+          const cards = Array.from(document.querySelectorAll(".result-card"));
+          const files = cards.map((c) => c.dataset.file).filter(Boolean);
+          if (files.length === 0) {
+            alert("No result images to download");
+            return;
+          }
+
+          // POST to /download_zip and stream the blob as a file download
+          try {
+            const resp = await fetch("/download_zip", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ files: files }),
+            });
+            if (!resp.ok) {
+              const txt = await resp.text();
+              alert("Failed to create ZIP: " + txt);
+              return;
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "results_images.zip";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            console.error(err);
+            alert("Error downloading ZIP: " + err.message);
           }
         });
       }
