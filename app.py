@@ -1,4 +1,9 @@
 import os
+import warnings
+# Suppress TensorFlow deprecation warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow info/warning messages
+
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from flask import send_file, jsonify
@@ -19,11 +24,15 @@ except Exception as e:
     )
     raise RuntimeError(helpful)
 
+# Configuration
 BASE_DIR = os.path.dirname(__file__)
 UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXT = {'png', 'jpg', 'jpeg'}
+
+# Flask debug mode (set to False to prevent continuous reloading with TensorFlow)
+DEBUG_MODE = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
@@ -116,4 +125,7 @@ def download_zip():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Run Flask app without debug mode to prevent continuous reloading
+    # The auto-reloader (watchdog) causes issues with TensorFlow/Keras imports
+    # To enable debug mode, set environment variable: FLASK_DEBUG=true
+    app.run(host='0.0.0.0', port=5000, debug=DEBUG_MODE, use_reloader=DEBUG_MODE)
