@@ -128,4 +128,4 @@ if __name__ == '__main__':
     # Run Flask app without debug mode to prevent continuous reloading
     # The auto-reloader (watchdog) causes issues with TensorFlow/Keras imports
     # To enable debug mode, set environment variable: FLASK_DEBUG=true
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG_MODE, use_reloader=DEBUG_MODE)
+    app.run(host='0.0.0.0', port=6070, debug=DEBUG_MODE, use_reloader=DEBUG_MODE)

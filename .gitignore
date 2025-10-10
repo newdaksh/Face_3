@@ -3,3 +3,4 @@ __pycache__/
 dataset_images/
 face_index
 uploads
+env
